@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POLYCC DASHBOARD — Latihan Keselamatan Siber</title>
+  <meta name="description" content="Dashboard Security Operations Centre (SOC) untuk tujuan latihan. Data adalah dummy.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <!-- Letak logo di assets/polycc-logo.png. Jika fail tiada, ikon perisai dipaparkan. -->
+      <img src="assets/polycc-logo.png" alt="Logo POLYCC" class="brand-logo"
+           onerror="this.hidden = true; this.nextElementSibling.hidden = false;">
+      <span class="brand-icon" aria-hidden="true" hidden>🛡️</span>
+      <div>
+        <h1>POLYCC DASHBOARD</h1>
+        <p class="subtitle" id="orgName">Memuatkan…</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-terminal" id="terminalBtn" type="button">
+        <span class="term-dot"></span>TERMINAL
+      </button>
+      <span class="clock" id="clock">--:--:--</span>
+      <label class="live-toggle">
+        <input type="checkbox" id="liveToggle">
+        <span class="live-pill"><span class="dot"></span>LIVE</span>
+      </label>
+    </div>
+  </header>
+
+  <!-- ===== TERMINAL MODAL ===== -->
+  <div class="terminal-overlay" id="terminalOverlay">
+    <div class="terminal-modal">
+      <div class="term-titlebar">
+        <div class="term-wm-btns">
+          <span class="wm-close" id="termClose" title="Tutup"></span>
+          <span class="wm-min"></span>
+          <span class="wm-max"></span>
+        </div>
+        <span class="term-title-text">soc@polycc-srv — tail -f /var/log/soc/*.log</span>
+        <button class="term-close-btn" id="termCloseBtn" title="Tutup">✕</button>
+      </div>
+      <div class="term-tabs" id="termTabs">
+        <!-- Tabs dijana oleh JS -->
+      </div>
+      <div class="term-body" id="termBody">
+        <!-- Pane grids dijana oleh JS -->
+      </div>
+    </div>
+  </div>
+
+  <main class="container">
+
+    <!-- ===== FILTER ===== -->
+    <section class="filters" aria-label="Penapis">
+      <div class="field">
+        <label for="rangeSelect">Julat masa</label>
+        <select id="rangeSelect">
+          <option value="1">1 jam lepas</option>
+          <option value="6">6 jam lepas</option>
+          <option value="24" selected>24 jam lepas</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="severitySelect">Severity</label>
+        <select id="severitySelect">
+          <option value="all">Semua</option>
+          <option>Critical</option>
+          <option>High</option>
+          <option>Medium</option>
+          <option>Low</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="typeSelect">Jenis serangan</label>
+        <select id="typeSelect"><option value="all">Semua</option></select>
+      </div>
+      <div class="field grow">
+        <label for="searchInput">Cari IP / negara / sasaran</label>
+        <input type="search" id="searchInput" placeholder="cth: 203.0.113 atau Russia">
+      </div>
+      <button class="btn ghost" id="resetBtn" type="button">Reset</button>
+    </section>
+
+    <!-- ===== KPI CARDS ===== -->
+    <section class="kpis" aria-label="Petunjuk utama">
+      <article class="kpi">
+        <p class="kpi-label">Jumlah Event</p>
+        <p class="kpi-value" id="kpiTotal">0</p>
+        <p class="kpi-note">dalam julat dipilih</p>
+      </article>
+      <article class="kpi">
+        <p class="kpi-label">Login Gagal</p>
+        <p class="kpi-value" id="kpiFailed">0</p>
+        <p class="kpi-note">cubaan brute force</p>
+      </article>
+      <article class="kpi">
+        <p class="kpi-label">IP Sumber Unik</p>
+        <p class="kpi-value" id="kpiIps">0</p>
+        <p class="kpi-note">penyerang berbeza</p>
+      </article>
+      <article class="kpi">
+        <p class="kpi-label">Kadar Disekat</p>
+        <p class="kpi-value" id="kpiBlocked">0%</p>
+        <p class="kpi-note">Blocked + Quarantined</p>
+      </article>
+      <article class="kpi critical">
+        <p class="kpi-label">Alert Kritikal</p>
+        <p class="kpi-value" id="kpiCritical">0</p>
+        <p class="kpi-note">perlu tindakan segera</p>
+      </article>
+    </section>
+
+    <!-- ===== CHARTS ===== -->
+    <section class="grid">
+      <article class="panel span-2">
+        <header class="panel-head">
+          <h2>Timeline Event ikut Severity</h2>
+        </header>
+        <div class="chart-box"><canvas id="timelineChart"></canvas></div>
+      </article>
+
+      <article class="panel">
+        <header class="panel-head">
+          <h2>Jenis Serangan</h2>
+          <span class="hint">klik untuk tapis</span>
+        </header>
+        <div class="chart-box"><canvas id="typeChart"></canvas></div>
+      </article>
+
+      <article class="panel">
+        <header class="panel-head">
+          <h2>Top 10 IP Penyerang</h2>
+          <span class="hint">klik untuk cari</span>
+        </header>
+        <div class="chart-box tall"><canvas id="ipChart"></canvas></div>
+      </article>
+
+      <article class="panel">
+        <header class="panel-head"><h2>Negara Asal Serangan</h2></header>
+        <div class="chart-box tall"><canvas id="countryChart"></canvas></div>
+      </article>
+
+      <article class="panel">
+        <header class="panel-head"><h2>Server Paling Disasar</h2></header>
+        <div class="chart-box tall"><canvas id="targetChart"></canvas></div>
+      </article>
+    </section>
+
+    <!-- ===== ALERT TABLE ===== -->
+    <section class="panel">
+      <header class="panel-head">
+        <h2>Alert Terkini <span class="count" id="tableCount"></span></h2>
+        <button class="btn" id="exportBtn" type="button">Export CSV</button>
+      </header>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Masa</th><th>Severity</th><th>Jenis</th>
+              <th>IP Sumber</th><th>Negara</th><th>Sasaran</th><th>Port</th><th>Tindakan</th>
+            </tr>
+          </thead>
+          <tbody id="alertBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="footer">
+      Data adalah <strong>dummy</strong> untuk tujuan latihan. Alamat IP daripada julat dokumentasi RFC 5737.
+    </footer>
+  </main>
+
+  <script src="js/vendor/chart.umd.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
